@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EpiSim — AI-Powered Epidemic Modeling System</title>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ─── DESIGN TOKENS ─────────────────────────────────────────── */
+:root {
+  --bg-0:    #030712;
+  --bg-1:    #0a0f1e;
+  --bg-2:    #0f172a;
+  --bg-3:    #1e293b;
+  --bg-4:    #273549;
+  --border:  #1e293b;
+  --border-hi: #334155;
+  --text-1:  #f1f5f9;
+  --text-2:  #94a3b8;
+  --text-3:  #64748b;
+  --accent:  #38bdf8;
+  --accent2: #818cf8;
+  --green:   #22c55e;
+  --red:     #ef4444;
+  --amber:   #f59e0b;
+  --purple:  #a855f7;
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-ui:   'Space Grotesk', sans-serif;
+  --radius:    8px;
+  --shadow:    0 4px 24px rgba(0,0,0,0.5);
+}
+
+/* ─── RESET ─────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg-0);
+  color: var(--text-1);
+  font-family: var(--font-ui);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-1); }
+::-webkit-scrollbar-thumb { background: var(--bg-3); border-radius: 3px; }
+
+/* ─── HEADER ─────────────────────────────────────────────────── */
+header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(3,7,18,0.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  height: 60px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.logo {
+  display: flex; align-items: center; gap: 12px;
+}
+.logo-icon {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, #ef4444, #f59e0b);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 700; color: #fff;
+  font-family: var(--font-mono);
+  box-shadow: 0 0 20px rgba(239,68,68,0.3);
+}
+.logo-text {
+  font-family: var(--font-mono);
+  font-size: 18px; font-weight: 600;
+  letter-spacing: -0.5px;
+  background: linear-gradient(to right, #f1f5f9, #94a3b8);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.logo-sub { font-size: 10px; color: var(--text-3); letter-spacing: 2px; text-transform: uppercase; }
+.header-actions { display: flex; align-items: center; gap: 8px; }
+.status-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.2)} }
+
+.btn {
+  padding: 7px 14px;
+  border: 1px solid var(--border-hi);
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex; align-items: center; gap: 6px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(56,189,248,0.05); }
+.btn-primary {
+  background: linear-gradient(135deg, #0ea5e9, #6366f1);
+  border-color: transparent; color: #fff;
+  font-weight: 600; font-size: 12px;
+  box-shadow: 0 0 20px rgba(14,165,233,0.25);
+}
+.btn-primary:hover { box-shadow: 0 0 30px rgba(14,165,233,0.4); color: #fff; }
+.btn-danger { border-color: var(--red); color: var(--red); }
+.btn-danger:hover { background: rgba(239,68,68,0.1); }
+
+/* ─── LAYOUT ─────────────────────────────────────────────────── */
+.app-grid {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 0;
+  min-height: calc(100vh - 60px);
+}
+.sidebar {
+  background: var(--bg-1);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 20px 16px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+.main-content {
+  padding: 20px;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 20px;
+}
+
+/* ─── SIDEBAR SECTIONS ───────────────────────────────────────── */
+.section-label {
+  font-family: var(--font-mono);
+  font-size: 9px; font-weight: 600;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--text-3);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+.control-group { display: flex; flex-direction: column; gap: 10px; }
+.control-row { display: flex; flex-direction: column; gap: 4px; }
+.control-label {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 11px; color: var(--text-2);
+  font-family: var(--font-mono);
+}
+.control-label span { color: var(--accent); font-weight: 600; }
+
+input[type="range"] {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 4px;
+  background: var(--bg-3); border-radius: 2px; outline: none;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px rgba(56,189,248,0.5);
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.3); }
+
+select, input[type="number"] {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-hi);
+  border-radius: var(--radius);
+  color: var(--text-1);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+select:focus, input[type="number"]:focus { border-color: var(--accent); }
+
+/* ─── TABS ───────────────────────────────────────────────────── */
+.tabs {
+  display: flex; gap: 2px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 3px;
+}
+.tab {
+  flex: 1;
+  padding: 7px 8px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 10px; font-weight: 500;
+  letter-spacing: 0.5px;
+  color: var(--text-3);
+  cursor: pointer;
+  border-radius: 5px;
+  transition: all 0.2s;
+  border: none; background: none;
+  text-transform: uppercase;
+}
+.tab.active {
+  background: var(--bg-3);
+  color: var(--accent);
+  box-shadow: 0 0 12px rgba(56,189,248,0.1);
+}
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ─── KPI CARDS ─────────────────────────────────────────────── */
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+.kpi-card {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.kpi-card::before {
+  content: "";
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: var(--kpi-color, var(--accent));
+  opacity: 0.7;
+}
+.kpi-card:hover { border-color: var(--border-hi); }
+.kpi-label {
+  font-family: var(--font-mono);
+  font-size: 9px; font-weight: 500;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--text-3); margin-bottom: 6px;
+}
+.kpi-value {
+  font-family: var(--font-mono);
+  font-size: 22px; font-weight: 700;
+  color: var(--kpi-color, var(--text-1));
+  line-height: 1;
+  text-shadow: 0 0 20px var(--kpi-color, transparent);
+}
+.kpi-sub { font-size: 10px; color: var(--text-3); margin-top: 4px; }
+
+/* ─── CHART CARDS ────────────────────────────────────────────── */
+.chart-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.chart-card {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.chart-card.full { grid-column: 1 / -1; }
+.chart-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.chart-title {
+  font-family: var(--font-mono);
+  font-size: 11px; font-weight: 500;
+  color: var(--text-2); letter-spacing: 0.5px;
+}
+.chart-body { padding: 0; }
+.plotly-chart { width: 100%; height: 280px; }
+.plotly-chart-lg { width: 100%; height: 320px; }
+
+/* ─── COMPARISON TABLE ───────────────────────────────────────── */
+.table-wrap { overflow-x: auto; }
+table {
+  width: 100%; border-collapse: collapse;
+  font-family: var(--font-mono); font-size: 11px;
+}
+th {
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--text-3);
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border);
+}
+td {
+  padding: 10px 14px;
+  color: var(--text-2);
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+}
+tr:hover td { background: var(--bg-2); }
+.val-red { color: var(--red); }
+.val-green { color: var(--green); }
+.val-amber { color: var(--amber); }
+.val-blue { color: var(--accent); }
+
+/* ─── LOADER ─────────────────────────────────────────────────── */
+.loader-overlay {
+  position: fixed; inset: 0; z-index: 999;
+  background: rgba(3,7,18,0.85);
+  display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(4px);
+  opacity: 0; pointer-events: none; transition: opacity 0.3s;
+}
+.loader-overlay.active { opacity: 1; pointer-events: all; }
+.loader-box {
+  background: var(--bg-2);
+  border: 1px solid var(--border-hi);
+  border-radius: 12px;
+  padding: 32px 48px;
+  text-align: center;
+}
+.loader-spinner {
+  width: 40px; height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loader-text { font-family: var(--font-mono); font-size: 12px; color: var(--text-2); }
+
+/* ─── TOAST ──────────────────────────────────────────────────── */
+.toast {
+  position: fixed; bottom: 24px; right: 24px; z-index: 1000;
+  background: var(--bg-2);
+  border: 1px solid var(--border-hi);
+  border-radius: var(--radius);
+  padding: 12px 20px;
+  font-family: var(--font-mono); font-size: 11px; color: var(--text-1);
+  box-shadow: var(--shadow);
+  transform: translateY(80px); opacity: 0;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  max-width: 320px;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { border-left: 3px solid var(--green); }
+.toast.error   { border-left: 3px solid var(--red); }
+
+/* ─── EQUATION BOX ───────────────────────────────────────────── */
+.eq-box {
+  background: var(--bg-0);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent2);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--text-2);
+  line-height: 2;
+}
+.eq-box .eq-title { color: var(--accent2); font-weight: 600; margin-bottom: 6px; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; }
+
+/* ─── RESPONSIVE ─────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .app-grid { grid-template-columns: 260px 1fr; }
+  .kpi-row { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 800px) {
+  .app-grid { grid-template-columns: 1fr; }
+  .sidebar { border-right: none; border-bottom: 1px solid var(--border); }
+  .chart-grid { grid-template-columns: 1fr; }
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ─── MISC ───────────────────────────────────────────────────── */
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+  background: rgba(56,189,248,0.12); color: var(--accent);
+  border: 1px solid rgba(56,189,248,0.2);
+}
+.empty-state {
+  padding: 60px;
+  text-align: center;
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}
+.empty-state .icon { font-size: 40px; display: block; margin-bottom: 12px; }
+.pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px; border: 1px solid; font-family: var(--font-mono);
+  font-size: 9px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
+}
+.pill-red   { border-color: var(--red);   color: var(--red);   background: rgba(239,68,68,0.08); }
+.pill-green { border-color: var(--green); color: var(--green); background: rgba(34,197,94,0.08); }
+.pill-blue  { border-color: var(--accent); color: var(--accent); background: rgba(56,189,248,0.08); }
+
+input[type="number"] { -moz-appearance: textfield; }
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div class="loader-overlay" id="loader">
+  <div class="loader-box">
+    <div class="loader-spinner"></div>
+    <div class="loader-text" id="loader-text">Running simulation…</div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">∑</div>
+    <div>
+      <div class="logo-text">EpiSim</div>
+      <div class="logo-sub">Epidemic Modeling &amp; AI Prediction</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <div class="status-dot" title="System ready"></div>
+    <button class="btn" onclick="exportCSV()">⬇ Export CSV</button>
+    <button class="btn" onclick="downloadSample()">⬇ Sample Dataset</button>
+    <a href="https://github.com" class="btn">Docs</a>
+  </div>
+</header>
+
+<!-- MAIN APP GRID -->
+<div class="app-grid">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+
+    <!-- Model Selection -->
+    <div>
+      <div class="section-label">Model Type</div>
+      <div class="tabs" id="model-tabs">
+        <button class="tab active" data-model="SIR" onclick="setModel('SIR',this)">SIR</button>
+        <button class="tab" data-model="SEIR" onclick="setModel('SEIR',this)">SEIR</button>
+      </div>
+    </div>
+
+    <!-- Population -->
+    <div>
+      <div class="section-label">Population</div>
+      <div class="control-row">
+        <div class="control-label">Population Size <span id="val-N">1,000,000</span></div>
+        <input type="number" id="inp-N" value="1000000" min="1000" max="100000000"
+               oninput="fmtNum('val-N',this.value)">
+      </div>
+      <div class="control-row">
+        <div class="control-label">Initial Infected <span id="val-I0">10</span></div>
+        <input type="number" id="inp-I0" value="10" min="1" max="10000"
+               oninput="document.getElementById('val-I0').textContent=parseInt(this.value)||1">
+      </div>
+      <div class="control-row" id="row-E0" style="display:none">
+        <div class="control-label">Initial Exposed <span id="val-E0">50</span></div>
+        <input type="number" id="inp-E0" value="50" min="0" max="10000"
+               oninput="document.getElementById('val-E0').textContent=parseInt(this.value)||0">
+      </div>
+      <div class="control-row">
+        <div class="control-label">Simulation Days <span id="val-days">365</span></div>
+        <input type="range" id="inp-days" min="30" max="730" value="365"
+               oninput="document.getElementById('val-days').textContent=this.value">
+      </div>
+    </div>
+
+    <!-- Disease Parameters -->
+    <div>
+      <div class="section-label">Disease Parameters</div>
+      <div class="control-group">
+        <div class="control-row">
+          <div class="control-label">β Transmission Rate <span id="val-beta">0.30</span></div>
+          <input type="range" id="inp-beta" min="0.01" max="2.0" step="0.01" value="0.30"
+                 oninput="document.getElementById('val-beta').textContent=parseFloat(this.value).toFixed(2)">
+        </div>
+        <div class="control-row">
+          <div class="control-label">γ Recovery Rate <span id="val-gamma">0.05</span></div>
+          <input type="range" id="inp-gamma" min="0.001" max="0.5" step="0.001" value="0.05"
+                 oninput="document.getElementById('val-gamma').textContent=parseFloat(this.value).toFixed(3)">
+        </div>
+        <div class="control-row" id="row-sigma" style="display:none">
+          <div class="control-label">σ Incubation Rate <span id="val-sigma">0.20</span></div>
+          <input type="range" id="inp-sigma" min="0.01" max="1.0" step="0.01" value="0.20"
+                 oninput="document.getElementById('val-sigma').textContent=parseFloat(this.value).toFixed(2)">
+        </div>
+      </div>
+    </div>
+
+    <!-- Intervention Parameters -->
+    <div>
+      <div class="section-label">Interventions</div>
+      <div class="control-group">
+        <div class="control-row">
+          <div class="control-label">ν Vaccination Rate <span id="val-nu">0.000</span></div>
+          <input type="range" id="inp-nu" min="0" max="0.05" step="0.0005" value="0"
+                 oninput="document.getElementById('val-nu').textContent=parseFloat(this.value).toFixed(4)">
+        </div>
+        <div class="control-row">
+          <div class="control-label">μ Mortality Rate <span id="val-mu">0.001</span></div>
+          <input type="range" id="inp-mu" min="0" max="0.1" step="0.0005" value="0.001"
+                 oninput="document.getElementById('val-mu').textContent=parseFloat(this.value).toFixed(4)">
+        </div>
+        <div class="control-row">
+          <div class="control-label">δ Social Distancing <span id="val-delta">0.00</span></div>
+          <input type="range" id="inp-delta" min="0" max="0.99" step="0.01" value="0"
+                 oninput="document.getElementById('val-delta').textContent=parseFloat(this.value).toFixed(2)">
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Prediction -->
+    <div>
+      <div class="section-label">AI Prediction</div>
+      <div class="control-group">
+        <div class="control-row">
+          <div class="control-label">Algorithm</div>
+          <select id="sel-ai">
+            <option value="random_forest">Random Forest</option>
+            <option value="linear">Linear Regression</option>
+          </select>
+        </div>
+        <div class="control-row">
+          <div class="control-label">Forecast Horizon <span id="val-fdays">30</span> days</div>
+          <input type="range" id="inp-fdays" min="7" max="90" value="30"
+                 oninput="document.getElementById('val-fdays').textContent=this.value">
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div style="display:flex; flex-direction:column; gap:8px; margin-top:auto; padding-top:8px;">
+      <button class="btn btn-primary" onclick="runSimulation()">▶ Run Simulation</button>
+      <button class="btn" onclick="runComparison()">⚡ Compare Scenarios</button>
+      <button class="btn" onclick="runPrediction()">🤖 AI Predict</button>
+    </div>
+
+  </aside>
+
+  <!-- ── MAIN CONTENT ── -->
+  <main class="main-content">
+
+    <!-- Navigation Tabs -->
+    <div class="tabs" style="max-width:640px">
+      <button class="tab active" data-tab="dashboard" onclick="switchTab('dashboard',this)">Dashboard</button>
+      <button class="tab" data-tab="charts"    onclick="switchTab('charts',this)">Charts</button>
+      <button class="tab" data-tab="comparison" onclick="switchTab('comparison',this)">Comparison</button>
+      <button class="tab" data-tab="prediction" onclick="switchTab('prediction',this)">AI Predict</button>
+      <button class="tab" data-tab="about"     onclick="switchTab('about',this)">About</button>
+    </div>
+
+    <!-- ── TAB: DASHBOARD ── -->
+    <div id="tab-dashboard" class="tab-content active">
+      <div class="kpi-row">
+        <div class="kpi-card" style="--kpi-color:#38bdf8">
+          <div class="kpi-label">Peak Infected</div>
+          <div class="kpi-value" id="kpi-peak">—</div>
+          <div class="kpi-sub" id="kpi-peak-day">Run a simulation</div>
+        </div>
+        <div class="kpi-card" style="--kpi-color:#22c55e">
+          <div class="kpi-label">Total Recovered</div>
+          <div class="kpi-value" id="kpi-recovered">—</div>
+          <div class="kpi-sub">at end of simulation</div>
+        </div>
+        <div class="kpi-card" style="--kpi-color:#ef4444">
+          <div class="kpi-label">Total Deaths</div>
+          <div class="kpi-value" id="kpi-deaths">—</div>
+          <div class="kpi-sub">cumulative</div>
+        </div>
+        <div class="kpi-card" style="--kpi-color:#f59e0b">
+          <div class="kpi-label">R₀ Value</div>
+          <div class="kpi-value" id="kpi-r0">—</div>
+          <div class="kpi-sub" id="kpi-r0-desc">basic reproduction number</div>
+        </div>
+        <div class="kpi-card" style="--kpi-color:#a855f7">
+          <div class="kpi-label">Model</div>
+          <div class="kpi-value" id="kpi-model" style="font-size:18px">SIR</div>
+          <div class="kpi-sub" id="kpi-days-label">— days</div>
+        </div>
+      </div>
+
+      <div class="chart-card full">
+        <div class="chart-header">
+          <span class="chart-title">COMPARTMENT TIME SERIES</span>
+          <span class="badge" id="badge-r0">R₀ = —</span>
+        </div>
+        <div class="chart-body">
+          <div id="chart-main" class="plotly-chart-lg">
+            <div class="empty-state"><span class="icon">🦠</span>Configure parameters and click <strong>Run Simulation</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-grid">
+        <div class="chart-card">
+          <div class="chart-header"><span class="chart-title">DAILY NEW INFECTIONS</span></div>
+          <div class="chart-body"><div id="chart-daily" class="plotly-chart"><div class="empty-state" style="padding:40px"><span>📊</span> Awaiting simulation</div></div></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header"><span class="chart-title">RECOVERY TREND</span></div>
+          <div class="chart-body"><div id="chart-recovery" class="plotly-chart"><div class="empty-state" style="padding:40px"><span>💚</span> Awaiting simulation</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB: CHARTS ── -->
+    <div id="tab-charts" class="tab-content">
+      <div class="chart-grid">
+        <div class="chart-card">
+          <div class="chart-header"><span class="chart-title">DEATH RATE ANALYSIS</span></div>
+          <div class="chart-body"><div id="chart-death" class="plotly-chart"><div class="empty-state" style="padding:40px"><span>⚠️</span> Awaiting simulation</div></div></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header"><span class="chart-title">INFECTION HEATMAP (WEEKLY)</span></div>
+          <div class="chart-body"><div id="chart-heatmap" class="plotly-chart"><div class="empty-state" style="padding:40px"><span>🗓</span> Awaiting simulation</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB: COMPARISON ── -->
+    <div id="tab-comparison" class="tab-content">
+      <div class="chart-card full">
+        <div class="chart-header">
+          <span class="chart-title">SCENARIO COMPARISON</span>
+          <button class="btn" onclick="exportComparison()">⬇ Export CSV</button>
+        </div>
+        <div class="chart-body">
+          <div id="chart-comparison" class="plotly-chart-lg">
+            <div class="empty-state"><span class="icon">⚡</span>Click <strong>Compare Scenarios</strong> to run No Intervention vs Lockdown vs Vaccination</div>
+          </div>
+        </div>
+      </div>
+      <div class="chart-card full" id="comp-table-card" style="display:none">
+        <div class="chart-header"><span class="chart-title">SCENARIO SUMMARY</span></div>
+        <div class="table-wrap">
+          <table id="comp-table">
+            <thead>
+              <tr>
+                <th>Scenario</th><th>Peak Infected</th><th>Peak Day</th>
+                <th>Total Deaths</th><th>Total Recovered</th><th>R₀</th><th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="comp-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB: AI PREDICTION ── -->
+    <div id="tab-prediction" class="tab-content">
+      <div class="chart-card full">
+        <div class="chart-header">
+          <span class="chart-title">AI INFECTION FORECAST</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span class="pill pill-blue" id="ai-model-pill">—</span>
+            <span id="ai-metrics" style="font-family:var(--font-mono);font-size:10px;color:var(--text-3)"></span>
+          </div>
+        </div>
+        <div class="chart-body">
+          <div id="chart-prediction" class="plotly-chart-lg">
+            <div class="empty-state"><span class="icon">🤖</span>Run a simulation first, then click <strong>AI Predict</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB: ABOUT ── -->
+    <div id="tab-about" class="tab-content">
+      <div class="chart-card full">
+        <div class="chart-header"><span class="chart-title">MATHEMATICAL MODELS</span></div>
+        <div style="padding:24px;display:flex;flex-direction:column;gap:20px">
+
+          <div class="eq-box">
+            <div class="eq-title">SIR Model — Ordinary Differential Equations</div>
+            dS/dt  =  −β·S·I/N  −  ν·S<br>
+            dI/dt  =  +β·S·I/N  −  γ·I  −  μ·I<br>
+            dR/dt  =  +γ·I      +  ν·S<br>
+            dD/dt  =  +μ·I<br>
+            <br>
+            R₀  =  β_eff / γ  =  β·(1−δ) / γ<br>
+            Herd Immunity Threshold  =  1 − 1/R₀
+          </div>
+
+          <div class="eq-box">
+            <div class="eq-title">SEIR Model — Extended with Exposed Compartment</div>
+            dS/dt  =  −β·S·I/N  −  ν·S<br>
+            dE/dt  =  +β·S·I/N  −  σ·E<br>
+            dI/dt  =  +σ·E      −  γ·I  −  μ·I<br>
+            dR/dt  =  +γ·I      +  ν·S<br>
+            dD/dt  =  +μ·I<br>
+            <br>
+            Mean incubation period  =  1/σ  days<br>
+            Mean infectious period  =  1/γ  days
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;font-family:var(--font-mono);font-size:11px">
+            <div>
+              <div class="section-label" style="margin-bottom:10px">Parameter Reference</div>
+              <div style="display:flex;flex-direction:column;gap:6px;color:var(--text-2)">
+                <div><span style="color:var(--accent)">N</span>  — Total Population</div>
+                <div><span style="color:var(--accent)">β</span>  — Transmission rate (contacts × prob)</div>
+                <div><span style="color:var(--accent)">γ</span>  — Recovery rate (1/γ = infectious days)</div>
+                <div><span style="color:var(--accent)">σ</span>  — Incubation rate [SEIR only]</div>
+                <div><span style="color:var(--accent)">ν</span>  — Vaccination rate per day</div>
+                <div><span style="color:var(--accent)">μ</span>  — Disease-induced mortality rate</div>
+                <div><span style="color:var(--accent)">δ</span>  — Social distancing factor [0,1]</div>
+              </div>
+            </div>
+            <div>
+              <div class="section-label" style="margin-bottom:10px">R₀ Interpretation</div>
+              <div style="display:flex;flex-direction:column;gap:6px;color:var(--text-2)">
+                <div><span style="color:var(--red)">R₀ &gt; 1</span>  — Epidemic grows (outbreak)</div>
+                <div><span style="color:var(--amber)">R₀ = 1</span>  — Endemic equilibrium</div>
+                <div><span style="color:var(--green)">R₀ &lt; 1</span>  — Epidemic dies out</div>
+                <br>
+                <div style="color:var(--text-3)">COVID-19:  R₀ ≈ 2.5–3.5</div>
+                <div style="color:var(--text-3)">Influenza: R₀ ≈ 1.2–1.4</div>
+                <div style="color:var(--text-3)">Measles:   R₀ ≈ 12–18</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ─── STATE ────────────────────────────────────────────────────
+const state = {
+  model: 'SIR',
+  lastResult: null,
+};
+
+const PLOTLY_CONFIG = {
+  displayModeBar: true,
+  displaylogo: false,
+  modeBarButtonsToRemove: ['sendDataToCloud','select2d','lasso2d'],
+  responsive: true,
+};
+
+// ─── UTILS ───────────────────────────────────────────────────
+function fmtNum(id, v) {
+  document.getElementById(id).textContent = parseInt(v).toLocaleString() || '0';
+}
+function fmt(n) {
+  if (n === null || n === undefined || n === '—') return '—';
+  const x = typeof n === 'string' ? parseFloat(n) : n;
+  if (isNaN(x)) return '—';
+  if (x >= 1e6)  return (x/1e6).toFixed(2)+'M';
+  if (x >= 1e3)  return (x/1e3).toFixed(1)+'K';
+  return Math.round(x).toLocaleString();
+}
+function showLoader(msg='Processing…') {
+  document.getElementById('loader-text').textContent = msg;
+  document.getElementById('loader').classList.add('active');
+}
+function hideLoader() {
+  document.getElementById('loader').classList.remove('active');
+}
+function toast(msg, type='success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast ${type} show`;
+  setTimeout(() => el.classList.remove('show'), 3500);
+}
+function setModel(m, el) {
+  state.model = m;
+  document.querySelectorAll('#model-tabs .tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('row-sigma').style.display = m === 'SEIR' ? 'flex' : 'none';
+  document.getElementById('row-E0').style.display    = m === 'SEIR' ? 'flex' : 'none';
+}
+function switchTab(name, el) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.main-content .tabs .tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  el.classList.add('active');
+}
+
+// ─── PARAMS ──────────────────────────────────────────────────
+function getParams() {
+  return {
+    model:  state.model,
+    N:      parseInt(document.getElementById('inp-N').value),
+    I0:     parseInt(document.getElementById('inp-I0').value),
+    E0:     parseInt(document.getElementById('inp-E0').value),
+    beta:   parseFloat(document.getElementById('inp-beta').value),
+    gamma:  parseFloat(document.getElementById('inp-gamma').value),
+    sigma:  parseFloat(document.getElementById('inp-sigma').value),
+    nu:     parseFloat(document.getElementById('inp-nu').value),
+    mu:     parseFloat(document.getElementById('inp-mu').value),
+    delta:  parseFloat(document.getElementById('inp-delta').value),
+    days:   parseInt(document.getElementById('inp-days').value),
+  };
+}
+
+// ─── PLOTLY RENDER ───────────────────────────────────────────
+function renderChart(divId, figJson) {
+  try {
+    const fig = typeof figJson === 'string' ? JSON.parse(figJson) : figJson;
+    Plotly.react(divId, fig.data, fig.layout, PLOTLY_CONFIG);
+  } catch(e) {
+    console.error('Chart render error:', e);
+  }
+}
+
+// ─── SIMULATION ──────────────────────────────────────────────
+async function runSimulation() {
+  showLoader('Running ' + state.model + ' simulation…');
+  try {
+    const res = await fetch('/api/simulate', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(getParams()),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+
+    state.lastResult = data.result;
+    updateKPIs(data.result);
+    renderChart('chart-main',     data.charts.compartment);
+    renderChart('chart-daily',    data.charts.daily_cases);
+    renderChart('chart-recovery', data.charts.recovery);
+    renderChart('chart-death',    data.charts.death_rate);
+    renderChart('chart-heatmap',  data.charts.heatmap);
+    toast('Simulation complete — R₀ = ' + data.result.R0);
+  } catch(e) {
+    toast('Error: ' + e.message, 'error');
+  } finally {
+    hideLoader();
+  }
+}
+
+function updateKPIs(r) {
+  document.getElementById('kpi-peak').textContent      = fmt(r.peak_infected);
+  document.getElementById('kpi-peak-day').textContent  = 'day ' + r.peak_day;
+  document.getElementById('kpi-recovered').textContent = fmt(r.total_recovered);
+  document.getElementById('kpi-deaths').textContent    = fmt(r.total_deaths);
+  document.getElementById('kpi-r0').textContent        = r.R0;
+  document.getElementById('kpi-model').textContent     = r.model;
+  document.getElementById('kpi-days-label').textContent= r.t.length + ' days';
+  document.getElementById('badge-r0').textContent      = 'R₀ = ' + r.R0;
+
+  const r0el = document.getElementById('kpi-r0-desc');
+  if (r.R0 > 1) r0el.textContent = '⚠ Epidemic spreading';
+  else          r0el.textContent = '✓ Epidemic contained';
+}
+
+// ─── COMPARISON ──────────────────────────────────────────────
+async function runComparison() {
+  showLoader('Running scenario comparison…');
+  try {
+    const p = getParams();
+    const res = await fetch('/api/compare', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(p),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+
+    renderChart('chart-comparison', data.chart);
+    buildCompTable(data.summary);
+    document.getElementById('comp-table-card').style.display = 'block';
+
+    // Switch to comparison tab
+    document.querySelectorAll('.main-content .tabs .tab').forEach(t => {
+      if (t.dataset.tab === 'comparison') { switchTab('comparison', t); t.classList.add('active'); }
+      else t.classList.remove('active');
+    });
+    toast('Comparison complete — 5 scenarios analysed');
+  } catch(e) {
+    toast('Error: ' + e.message, 'error');
+  } finally {
+    hideLoader();
+  }
+}
+
+function buildCompTable(summary) {
+  const tbody = document.getElementById('comp-tbody');
+  tbody.innerHTML = '';
+  summary.forEach(row => {
+    const r0Class = row.R0 > 1 ? 'val-red' : 'val-green';
+    tbody.innerHTML += `<tr>
+      <td><strong>${row.scenario}</strong></td>
+      <td class="val-red">${fmt(row.peak_infected)}</td>
+      <td>${row.peak_day}</td>
+      <td class="val-red">${fmt(row.total_deaths)}</td>
+      <td class="val-green">${fmt(row.total_recovered)}</td>
+      <td class="${r0Class}">${row.R0}</td>
+      <td>${row.R0 > 1
+        ? '<span class="pill pill-red">Epidemic</span>'
+        : '<span class="pill pill-green">Controlled</span>'}</td>
+    </tr>`;
+  });
+}
+
+// ─── AI PREDICTION ───────────────────────────────────────────
+async function runPrediction() {
+  if (!state.lastResult) {
+    toast('Run a simulation first!', 'error'); return;
+  }
+  showLoader('Training AI model…');
+  try {
+    const res = await fetch('/api/predict', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        infected:      state.lastResult.I,
+        model_type:    document.getElementById('sel-ai').value,
+        forecast_days: parseInt(document.getElementById('inp-fdays').value),
+      }),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+
+    renderChart('chart-prediction', data.chart);
+    document.getElementById('ai-model-pill').textContent =
+      data.result.model_type.replace('_',' ').toUpperCase();
+    const m = data.result.metrics;
+    document.getElementById('ai-metrics').textContent =
+      `MAE: ${m.MAE}  |  R²: ${m.R2}`;
+
+    // Switch to prediction tab
+    document.querySelectorAll('.main-content .tabs .tab').forEach(t => {
+      if (t.dataset.tab === 'prediction') { switchTab('prediction', t); t.classList.add('active'); }
+      else t.classList.remove('active');
+    });
+    toast('AI forecast ready — ' + data.result.forecast_horizon + ' day horizon');
+  } catch(e) {
+    toast('Error: ' + e.message, 'error');
+  } finally {
+    hideLoader();
+  }
+}
+
+// ─── EXPORTS ─────────────────────────────────────────────────
+function exportCSV() {
+  if (!state.lastResult) { toast('Run a simulation first!', 'error'); return; }
+  window.location = '/api/export/csv';
+  toast('Downloading simulation CSV…');
+}
+function exportComparison() {
+  window.location = '/api/export/comparison';
+  toast('Downloading comparison CSV…');
+}
+function downloadSample() {
+  window.location = '/api/sample-dataset';
+  toast('Downloading sample dataset…');
+}
+
+// ─── INIT ─────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  // Run default simulation on load
+  setTimeout(runSimulation, 300);
+});
+</script>
+</body>
+</html>
