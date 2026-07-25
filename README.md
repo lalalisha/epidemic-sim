@@ -6,7 +6,7 @@ A production-grade epidemic simulation and prediction platform built with **Pyth
 
 ---
 
-## 📋 Table of Contents
+##  Table of Contents
 1. [Features](#features)
 2. [Tech Stack](#tech-stack)
 3. [Project Structure](#project-structure)
@@ -17,7 +17,7 @@ A production-grade epidemic simulation and prediction platform built with **Pyth
 
 ---
 
-## ✨ Features
+##  Features
 
 | Feature | Description |
 |---|---|
@@ -32,7 +32,7 @@ A production-grade epidemic simulation and prediction platform built with **Pyth
 
 ---
 
-## 🛠 Tech Stack
+##  Tech Stack
 
 - **Backend**: Python 3.11+, Flask 3.0, Flask-CORS
 - **Math/Science**: NumPy, SciPy (ODE solver), Pandas
@@ -42,7 +42,7 @@ A production-grade epidemic simulation and prediction platform built with **Pyth
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 epidemic_sim/
@@ -70,7 +70,7 @@ epidemic_sim/
 
 ---
 
-## 🚀 Setup Instructions (VS Code)
+##  Setup Instructions (VS Code)
 
 ### Prerequisites
 - Python 3.11 or higher
@@ -108,7 +108,7 @@ Navigate to: **http://127.0.0.1:5000**
 
 ---
 
-## 🌐 API Reference
+##  API Reference
 
 | Method | Endpoint | Description |
 |---|---|---|
@@ -139,7 +139,7 @@ Navigate to: **http://127.0.0.1:5000**
 
 ---
 
-## 📐 Mathematical Models
+##  Mathematical Models
 
 ### SIR Model
 ```
@@ -172,5 +172,5 @@ dD/dt =  μ·I
 
 ---
 
-## 📄 License
+##  License
 Academic project — for educational use.
