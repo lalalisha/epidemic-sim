@@ -42,7 +42,7 @@ A production-grade epidemic simulation and prediction platform built with **Pyth
 
 ---
 
-## Project Structure
+## Structure
 
 ```
 epidemic_sim/
