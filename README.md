@@ -1,4 +1,4 @@
-#  EpiSim — AI-Powered Epidemic Disease Spread Modeling System
+#  EpiSim  AI-Powered Epidemic Disease Spread Modeling System
 
 **Final Semester Project** 
 
