@@ -1,7 +1,5 @@
 #  EpiSim  AI-Powered Epidemic Disease Spread Modeling System
 
-**Final Semester Project** 
-
 A production-grade epidemic simulation and prediction platform built with **Python Flask**, **Plotly**, and **Scikit-learn**.
 
 ---
