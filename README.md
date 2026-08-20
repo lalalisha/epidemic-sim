@@ -18,7 +18,6 @@ A production-grade epidemic simulation and prediction platform built with **Pyth
 ##  Features
 
 | Feature | Description |
-|---|---|
 | **SIR Model** | Classic 3-compartment epidemic model |
 | **SEIR Model** | Extended model with Exposed compartment |
 | **Interactive Controls** | Population, β, γ, σ, ν, μ, δ sliders |
